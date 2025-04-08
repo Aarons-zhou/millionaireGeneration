@@ -1,20 +1,11 @@
-import mysql from "mysql2";
+import fs from "fs";
 
-const con = mysql.createConnection({
-    host: "localhost", // 运行mysql的服务器的IP地址
-    user: "root", // mysql数据库的用户名
-    password: "Stan131058", // 对应的密码
-    database: "stock_test" // 使用指定的数据库
-});
-con.connect((err) => {
-    const code = "603929";
-    // 第一步：创建表格，列为date、start_price、end_price、highest_price、lowest_price、quantity、amount、amplitude
-    const create_table_command = `CREATE TABLE IF NOT EXISTS ${code} (trade_day DATE, start_price INT, end_price INT, highest_price INT, lowest_price INT,quantity INT, amount INT, amplitude INT)`
+const testList = [
+    ["A1","A2","A3"],
+    ["B1","B2","B3"],
+    ["C1","C2","C3"],
+]
 
-    con.query(`${create_table_command}`, function (err, result, fields) {
-        console.log("mysql create table", err, result,fields);
-        // con.query(`INSERT INTO ${res.data.data.code} VALUES ?`, [historyDataList], function (err, result, fields) {
-        //     console.log("mysql insert into", result);
-        // })
-    })
-});
+const str = testList.map(list => list.join()).join("\n"); // 就是这样写
+
+fs.writeFileSync("./test.csv",str)
