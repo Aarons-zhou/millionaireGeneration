@@ -50,7 +50,6 @@ await getTodayDataList();
  * 3. 过滤退市：f2为"-"
  */
 const todayDataList = todayDataListRaw.filter(ele => /^00\d{4}$|^60\d{4}$/.test(ele.f12) && !(ele.f14.includes("ST") || ele.f14.includes("U") || ele.f14.includes("W")) && ele.f2 !== "-");
-// console.log(todayDataList);
 
 // 处理时间
 const currentTime = new Date();
@@ -58,10 +57,15 @@ const [year, month, day] = ["getFullYear", "getMonth", "getDate"].map(fn => curr
 const handleNumber = num => (num < 10 ? "0" : "") + num;
 const date = `${year}-${handleNumber(month + 1)}-${handleNumber(day)}`;
 
-const todayDataObj = {};
-todayDataList.forEach(obj => {
-    todayDataObj[obj.f12] = [date, obj.f17, obj.f2, obj.f15, obj.f16, obj.f5, obj.f6, obj.f3];
-});// 顺序：date, start_price, end_price, highest_price, lowest_price, quantity, amount, amplitude
+const todayDataListMap = todayDataList.map(obj => [obj.f12, date, Math.round(obj.f17 * 100), Math.round(obj.f2 * 100), Math.round(obj.f15 * 100), Math.round(obj.f16 * 100), Math.round(obj.f5 * 1), Math.round(obj.f6 / 10000), Math.round(obj.f3 * 100)]);
+await fs.writeFileSync("./todayDataList.csv",todayDataListMap.map(list => list.join()).join("\n"));
+
+
+// 这段放在handleTodayDataList，存是二维数组(第一个元素为code)
+// const todayDataObj = {};
+// todayDataList.forEach(obj => {
+//     todayDataObj[obj.f12] = [date, obj.f17, obj.f2, obj.f15, obj.f16, obj.f5, obj.f6, obj.f3];
+// });// 顺序：code, date, start_price, end_price, highest_price, lowest_price, quantity, amount, amplitude
 
 
 // const historyDataList = res.data.data?.klines.map(record => record.split(",").map((val, index) => {
