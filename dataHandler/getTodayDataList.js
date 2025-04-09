@@ -1,5 +1,5 @@
 /**
- * 获取当天股票信息，并写入csv
+ * 获取当天股票信息，并写入csv。
  * f12 "代码",f14 "名称",
  * f2 "最新价",f15 "最高",f16 "最低",f17 "今开",f3 "涨跌幅",f4 "涨跌额", f5 "成交量",f6 "成交额",
  * f7 "振幅",f8 "换手率",f9 "市盈率-动态", f10 "量比", f11 "5分钟涨跌", f18 "昨收"
@@ -23,7 +23,6 @@ const getTodayDataList = async (pageCurrent = 1, pageSize = 50) => {
         "fid": "f12",
         "fs": "m:0 t:6,m:0 t:80,m:1 t:2,m:1 t:23,m:0 t:81 s:2048",
         "fields": "f17,f2,f15,f16,f5,f6,f3,f12,f14", //formal
-        // "fields": "f2,f12,f14", // test
         "_": "1623833739532",
     };
     await axios.get(url, { params }).then(async res => {
@@ -59,54 +58,3 @@ const date = `${year}-${handleNumber(month + 1)}-${handleNumber(day)}`;
 
 const todayDataListMap = todayDataList.map(obj => [obj.f12, date, Math.round(obj.f17 * 100), Math.round(obj.f2 * 100), Math.round(obj.f15 * 100), Math.round(obj.f16 * 100), Math.round(obj.f5 * 1), Math.round(obj.f6 / 10000), Math.round(obj.f3 * 100)]);
 await fs.writeFileSync("./todayDataList.csv",todayDataListMap.map(list => list.join()).join("\n"));
-
-
-// 这段放在handleTodayDataList，存是二维数组(第一个元素为code)
-// const todayDataObj = {};
-// todayDataList.forEach(obj => {
-//     todayDataObj[obj.f12] = [date, obj.f17, obj.f2, obj.f15, obj.f16, obj.f5, obj.f6, obj.f3];
-// });// 顺序：code, date, start_price, end_price, highest_price, lowest_price, quantity, amount, amplitude
-
-
-// const historyDataList = res.data.data?.klines.map(record => record.split(",").map((val, index) => {
-//     if ([1, 2, 3, 4, 7].includes(index)) {
-//         return Math.round(val * 100);
-//     } else if (index === 5) {
-//         return Math.round(val * 1);
-//     } else if (index === 6) {
-//         return Math.round(val / 10000);
-//     } else {
-//         return val;
-//     }
-// }))
-
-
-
-// fs.writeFileSync("./todayData.csv",)
-
-// export default todayDataList
-
-/** todayDataList
- *  [{
-    f2: 4.63,
-    f3: -5.89,
-    f5: 100905,
-    f6: 46706926,
-    f12: '605055',
-    f14: '迎丰股份',
-    f15: 4.86,
-    f16: 4.49,
-    f17: 4.8
-  },
-  {
-    f2: 9.36,
-    f3: -3.31,
-    f5: 67930,
-    f6: 63301482,
-    f12: '605050',
-    f14: '福然德',
-    f15: 9.67,
-    f16: 9,
-    f17: 9.6
-}]
- */

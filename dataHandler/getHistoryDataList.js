@@ -66,7 +66,7 @@ const conn = await mysql.createConnection(sqlConf);
 
 
 // 一次性访问会超时，分批访问
-const codeListSplit = codeListRead.filter((code, index) => index >= 2800 && index < 3070);
-codeListSplit.forEach(async (code, index) => {
+const codeListSplit = codeListRead.filter((_, index) => index >= 2800 && index < 3070);
+codeListSplit.forEach(async code => {
     await getHistoryDataList(code);
 })
