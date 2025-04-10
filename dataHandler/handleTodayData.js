@@ -10,7 +10,7 @@ import sqlConf from "./sqlConf.json" with { type: "json" };
 
 // 1. 读取todayDataList.csv
 const todayDataObj = {};
-const todayDataList = await fs.readFileSync("./todayDataList.csv").toLocaleString().split("\r\n").map(str => str.split(","));
+const todayDataList = await fs.readFileSync("./todayDataList.csv").toLocaleString().split("\n").map(str => str.split(","));
 todayDataList.forEach(list => {
     todayDataObj[list[0]] = list.filter((_, index) => index).map((ele, index) => index ? ele * 1 : ele);
 });
