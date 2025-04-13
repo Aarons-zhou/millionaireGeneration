@@ -8,6 +8,8 @@
 
 import fs from "fs";
 import axios from "axios";
+import mysql from "mysql2/promise";
+import sqlConf from "./sqlConf.json" with { type: "json" };
 
 // 1. 获取当天股票信息
 const todayDataListRaw = [];
