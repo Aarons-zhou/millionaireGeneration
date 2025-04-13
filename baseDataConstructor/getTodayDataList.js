@@ -79,7 +79,7 @@ tableList.forEach(async tableName => {
 // 4. 写入数据库
 for (let code in todayDataObj) {
     const create_table_command = `CREATE TABLE IF NOT EXISTS stock${code}
-        (trade_day DATE, start_price INT, end_price INT, highest_price INT, lowest_price INT,quantity INT, amount INT, amplitude INT,
+        (trade_day DATE, opening_price INT, closing_price INT, highest_price INT, lowest_price INT,quantity INT, amount INT, amplitude INT,
         MA5 INT, MA10 INT, MA20 INT, MA30 INT, MA60 INT, MA120 INT)`
     await conn.execute(`${create_table_command}`);
     await conn.query(`INSERT INTO stock${code} VALUES ?`, [[todayDataObj[code]]]);
