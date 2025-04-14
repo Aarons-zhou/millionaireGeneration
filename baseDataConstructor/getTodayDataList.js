@@ -63,7 +63,8 @@ todayDataListMap.forEach(list => {
     todayDataObj[list[0]] = list.filter((_, index) => index);
 });
 // 写入csv，为getHistoryDataList.csv提供股票代码列表
-// fs.writeFileSync("./todayDataList.csv", todayDataListMap.map(list => list.join()).join("\n"));
+fs.writeFileSync("./baseDataConstructor/todayDataList.csv", todayDataListMap.map(list => list.join()).join("\n")); // 由main.js调用
+// fs.writeFileSync("./todayDataList.csv", todayDataListMap.map(list => list.join()).join("\n")); // 自行调用
 
 // 3. 读取数据库中的历史股价，添加MA数据
 const conn = await mysql.createConnection(sqlConf);
