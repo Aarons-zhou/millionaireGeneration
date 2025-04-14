@@ -63,7 +63,7 @@ todayDataListMap.forEach(list => {
     todayDataObj[list[0]] = list.filter((_, index) => index);
 });
 // 写入csv，为getHistoryDataList.csv提供股票代码列表
-await fs.writeFileSync("./todayDataList.csv", todayDataListMap.map(list => list.join()).join("\n"));
+// fs.writeFileSync("./todayDataList.csv", todayDataListMap.map(list => list.join()).join("\n"));
 
 // 3. 读取数据库中的历史股价，添加MA数据
 const conn = await mysql.createConnection(sqlConf);
@@ -71,7 +71,7 @@ const [tableListRaw] = await conn.execute("SHOW TABLES FROM stock_data");
 const tableList = tableListRaw.map(obj => obj["Tables_in_stock_data"]);
 tableList.forEach(async tableName => {
     const [recordList] = await conn.query(`SELECT * FROM ${tableName} ORDER BY trade_day DESC LIMIT 119`);
-    const historyPriceList = recordList.map(obj => obj["end_price"]);
+    const historyPriceList = recordList.map(obj => obj["closing_price"]);
     const todayData = todayDataObj[tableName.replace(/stock/, "")];
     historyPriceList.unshift(todayData[2]);
     const MAlist = [5, 10, 20, 30, 60, 120].map(num => Math.round(historyPriceList.filter((_, index) => index < num).reduce((former, letter) => former + letter) / num))
@@ -87,3 +87,5 @@ for (let code in todayDataObj) {
     await conn.query(`INSERT INTO stock${code} VALUES ?`, [[todayDataObj[code]]]);
     console.log("插入数据完毕", code);
 }
+
+export default null;
