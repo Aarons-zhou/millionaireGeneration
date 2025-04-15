@@ -74,17 +74,26 @@ tableList.forEach(async tableName => {
     const [recordList] = await conn.query(`SELECT * FROM ${tableName} ORDER BY trade_day DESC LIMIT 119`);
     const historyPriceList = recordList.map(obj => obj["closing_price"]);
     const todayData = todayDataObj[tableName.replace(/stock/, "")];
+    if (!todayData) { // 处理停牌数据
+        return;
+    }
+    const MADayList = [5, 10, 20, 30, 60, 120];
     historyPriceList.unshift(todayData[2]);
-    const MAlist = [5, 10, 20, 30, 60, 120].map(num => Math.round(historyPriceList.filter((_, index) => index < num).reduce((former, letter) => former + letter) / num))
-    todayData.push(...MAlist);
+    const MAListRaw = MADayList.map(num => Math.round(historyPriceList.filter((_, index) => index < num).reduce((former, letter) => former + letter) / num));
+    const MAList = MAListRaw.map((MAPrice, index) => historyPriceList.length >= MADayList[index] ? MAPrice : null);
+    todayData.push(...MAList);
 });
 
 // 4. 写入数据库
 for (let code in todayDataObj) {
     const create_table_command = `CREATE TABLE IF NOT EXISTS stock${code}
-        (trade_day DATE, opening_price INT, closing_price INT, highest_price INT, lowest_price INT,quantity INT, amount INT, amplitude INT,
-        MA5 INT, MA10 INT, MA20 INT, MA30 INT, MA60 INT, MA120 INT)`
+    (trade_day DATE, opening_price INT, closing_price INT, highest_price INT, lowest_price INT,quantity INT, amount INT, amplitude INT,
+    MA5 INT, MA10 INT, MA20 INT, MA30 INT, MA60 INT, MA120 INT)`
     await conn.execute(`${create_table_command}`);
+    // 处理复盘、新股数据：检验数组对象todayDataObj中每个数组是否符合长度要求
+    while (todayDataObj[code].length < 14) {
+        todayDataObj[code].push(null);
+    }
     await conn.query(`INSERT INTO stock${code} VALUES ?`, [[todayDataObj[code]]]);
     console.log("插入数据完毕", code);
 }
