@@ -36,6 +36,20 @@ const conclusionList = [];
  * 1.2 上述允许买入的4332条数据中，盈利2721条，亏损1611条。其中，下跌锤子线为636条，盈利下跌锤子线为377条，亏损下跌锤子线为259。原盈利率为62.81%，去除下跌锤子线的盈利率为(2721-377)/(4332-636)=63.42%；
  * 1.3 去除下跌锤子线后，highestPriceAmplitude为8.72%，closingPriceAmplitude为5.50%。
  */
+/*** 买入日的涨幅与收益率的关系：涨停效果最好但风险大（优化：测方差），其次是5%-6%但数据量很少。
+ * buyAmp      num    highestAmp    closingAmp
+ * [0,100)     503	  2.198903456	1.021179976
+ * [100,200)   415	  2.53790436	2.855137363
+ * [200,300)   215	  2.669869452	2.346231884
+ * [300,400)   110	  2.710790698	4.357281553
+ * [400,500)   113	  3.93382199	3.391775701
+ * [500,600)   98	  6.989060403	5.148571429
+ * [600,700)   20	  1.123492063	2.960277778
+ * [700,800)   20	  2.959428571	1.79
+ * [800,900)   9	  0.425454545	3.71
+ * [900,2000)  1201	  14.63131167	9.48121118
+ * avg         2771   7.49          4.58
+ */
 const hammerConf = {
     upperShadowRatio: 0,
     priceEntity: 0.01,
@@ -85,12 +99,14 @@ tableList.forEach(async (tableName, tableIndex) => {
             quitFlag: false,
             buyDay: 0,
             highestPriceDay: 0,
-            closingPriceDay: 0
+            closingPriceDay: 0,
+            buyAmplitude:0
         };
         for (let i = 1; i < hammerConf.focusingday + 1; i++) {
             const lowestPrice = recordList[hammerObj.index + i]?.lowest_price;
             const highestPrice = recordList[hammerObj.index + i]?.highest_price;
             const closingPrice = recordList[hammerObj.index + i]?.closing_price;
+            const amplitude = recordList[hammerObj.index + i]?.amplitude;
             // 2.1 盘中价（lowest_price)低于锤子线的lowest_price（止损点），结束关注；
             if (lowestPrice < hammerObj.lowest_price) {
                 info.quitFlag = true;
@@ -100,6 +116,7 @@ tableList.forEach(async (tableName, tableIndex) => {
             if (!info.buyPrice && closingPrice > hammerObj.highest_price) {
                 info.buyPrice = closingPrice;
                 info.buyDay = i;
+                info.buyAmplitude = amplitude;
                 continue;
             }
             // 2.3 如果已经买入，则记录盘中最高价和收盘最高价（需高于买入价）；
@@ -131,11 +148,11 @@ tableList.forEach(async (tableName, tableIndex) => {
             info.closingPrice ? fixedNum((info.closingPrice - info.buyPrice) / info.buyPrice) :
                 info.quitFlag ? quitAmplitude : nonquitAmplitude;
 
-        const conclusion = [tableName.replace(/stock/, ""), hammerObj.date, hammerObj.day, !!info.buyPrice, !!info.closingPrice, info.quitFlag, highestPriceAmplitude, info.highestPriceDay, closingPriceAmplitude, info.closingPriceDay, hammerObj.amplitude];
+        const conclusion = [tableName.replace(/stock/, ""), hammerObj.date, hammerObj.day, !!info.buyPrice, !!info.closingPrice, info.quitFlag, highestPriceAmplitude, info.highestPriceDay, closingPriceAmplitude, info.closingPriceDay, hammerObj.amplitude,info.buyAmplitude];
         conclusionList.push(conclusion);
     })
     if (tableIndex === tableList.length - 1) {
-        conclusionList.unshift(["code", "date", "weekday", "buyFlag", "profitFlag", "quitFlag", "highestPriceAmplitude", "highestPriceDay", "closingPriceAmplitude", "closingPriceDay", "hammerAmplitude"]);
+        conclusionList.unshift(["code", "date", "weekday", "buyFlag", "profitFlag", "quitFlag", "highestPriceAmplitude", "highestPriceDay", "closingPriceAmplitude", "closingPriceDay", "hammerAmplitude","hammerBuyAmplitude"]);
         fs.writeFile("./hammer.csv", conclusionList.map(list => list.join()).join("\n"), () => {
             console.log("已生成hammer.csv");
         });
