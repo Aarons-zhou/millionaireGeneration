@@ -89,7 +89,7 @@ tableList.forEach(async (tableName, tableIndex) => {
     const [recordList] = await conn.query(`SELECT * FROM ${tableName}`);
     const hammerList = recordList.filter((recordObj, index) => hammerJudge(recordObj, index))
         .map(recordObj => ({ ...recordObj, date: formatTime(recordObj["trade_day"]), day: recordObj["trade_day"].getDay() }))
-        .filter(recordObj => new Date() - recordObj["trade_day"] > 2 * hammerConf.focusingday * 24 * 60 * 60 * 1000); // 不要太新的数据，以免观察不彻底
+        .filter(recordObj => new Date() - recordObj["trade_day"] > 3 * hammerConf.focusingday * 24 * 60 * 60 * 1000); // 不要太新的数据，以免观察不彻底
     // 2. 检验是否盈利
     hammerList.forEach(hammerObj => {
         const info = {
