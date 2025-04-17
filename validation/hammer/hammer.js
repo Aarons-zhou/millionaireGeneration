@@ -1,62 +1,24 @@
 /**
  * 技术特征：
  * 1. 下跌趋势末期；
- * 2. 实体较小（设定不超过2%），下影线是实体两倍以上，上影线很短,（设定为不超过实体的1/4）。
+ * 2. 实体较小，下影线是实体两倍以上，上影线很短。
  * 出击点：锤子线出现后的下一个交易日，若收盘价超过锤子线的实体（上沿），则构成买点。次日盘中急升突破锤子线实体，也可以在盘中买入。
+ * 
+ * 经hammerDataAnalysis.js分析，新增限制条件（同时满足）：
+ * 1. 锤子线涨幅4.4%-5.6%；（历史胜率80.00%，盘中收益率8.66%，收盘收益率6.58%）
+ * 2. 买入日涨幅4.8%-5.4%。（历史胜率75.29%，盘中收益率7.28%，收盘收益率5.03%）
+ * 同时满足上述条件的历史数据120条，平均胜率87.5%，盘中收益率10.06%，收盘收益率7.87%
  */
 import fs from "fs";
 import mysql from "mysql2/promise";
 import sqlConf from "../../baseDataConstructor/sqlConf.json" with { type: "json" };
 
 const conclusionList = [];
-/**
- * 锤子线配置：upperShadowRatio, priceEntity, lowerShadowRatio, focusingday, priceAmplitudeCell, priceAmplitudeFloor => buyRatio, profitRatio, highestPriceAmplitude, closingPriceAmplitude
- * 配置1.1: 0, 0.01, 2, 4, undefined, undefined => 49.27%, 62.31%, 4.85%, 2.85%
- * 配置1.2: 0, 0.01, 3, 4, undefined, undefined => 51.35%, 63.14%, 5.81%, 3.43%
- * 配置1.3: 0, 0.01, 4, 4, undefined, undefined => 51.83%, 63.46%, 6.65%, 4.04%
- * 配置1.4: 0, 0.01, 5, 4, undefined, undefined => 50.68%, 62.74%, 7.47%, 4.55%
- * 
- * 配置2.1: 0, 0.01, 5, 4, 0.09, undefined => 47.65%, 63.35%, 3.21%, 1.60%
- * 配置2.2: 0, 0.01, 5, 4, 0.08, undefined => 47.76%, 63.38%, 3.22%, 1.61%
- * 配置2.3: 0, 0.01, 5, 4, 0.07, undefined => 47.74%, 63.41%, 3.22%, 1.61%
- * 配置2.4: 0, 0.01, 5, 4, 0.06, undefined => 47.72%, 63.38%, 3.22%, 1.61%
- * 
- * 配置3.1: 0, 0.01, 5, 4, undefined, -0.09 => 53.37%, 62.84%, 7.49%, 4.58%
- * 配置3.2: 0, 0.01, 5, 4, undefined, -0.03 => 54.10%, 62.83%, 3.21%, 1.60%
- * 配置3.3: 0, 0.01, 5, 4, undefined, -0.07 => 47.65%, 63.35%, 3.21%, 1.60%
- * 配置3.4: 0, 0.01, 5, 4, undefined, -0.06 => 47.65%, 63.35%, 3.21%, 1.60%
- * 
- * 
- * 总结：
- * 1. 下影线倍数越高，越能排除垃圾形态，盈利率越高。
- * 2. T字涨停很大程度拉高了平均盈利率，6%-9%的priceAmplitudeCell几乎无影响。
- * 
- * 推理：
- * 1.1 配置1.4数据8568条，允许买入4332条，禁止买入4236条；其中，下跌锤子线1804条，允许买入的下跌锤子线为636条，禁止买入的下跌锤子线为1168条。原允许买入率为50.56%，去除下跌锤子线的允许买入率为(4332-636)/(8568-1804)=54.64%；
- * 1.2 上述允许买入的4332条数据中，盈利2721条，亏损1611条。其中，下跌锤子线为636条，盈利下跌锤子线为377条，亏损下跌锤子线为259。原盈利率为62.81%，去除下跌锤子线的盈利率为(2721-377)/(4332-636)=63.42%；
- * 1.3 去除下跌锤子线后，highestPriceAmplitude为8.72%，closingPriceAmplitude为5.50%。
- */
-/*** 买入日的涨幅与收益率的关系：涨停效果最好但风险大（优化：测方差），其次是5%-6%但数据量很少。
- * buyAmp      num    highestAmp    closingAmp
- * [0,100)     503	  2.198903456	1.021179976
- * [100,200)   415	  2.53790436	2.855137363
- * [200,300)   215	  2.669869452	2.346231884
- * [300,400)   110	  2.710790698	4.357281553
- * [400,500)   113	  3.93382199	3.391775701
- * [500,600)   98	  6.989060403	5.148571429
- * [600,700)   20	  1.123492063	2.960277778
- * [700,800)   20	  2.959428571	1.79
- * [800,900)   9	  0.425454545	3.71
- * [900,2000)  1201	  14.63131167	9.48121118
- * avg         2771   7.49          4.58
- */
 const hammerConf = {
     upperShadowRatio: 0,
     priceEntity: 0.01,
     lowerShadowRatio: 5,
     focusingday: 4,
-    priceAmplitudeCell: 0.07,
-    priceAmplitudeFloor: -0.03,
 };
 const hammerJudge = (recordObj, index) => {
     const { opening_price, closing_price, highest_price, lowest_price } = recordObj;
@@ -72,11 +34,7 @@ const hammerJudge = (recordObj, index) => {
     const lowerShadowFlag = lowerShadow >= hammerConf.lowerShadowRatio * priceEntity;
     // 排除新股连板
     const oldStockFlag = index > 30;
-    // 限制锤子线涨跌幅：没有formerDayClosingPrice说明是新股首日
-    // const priceAmplitudeFlag = !formerDayClosingPrice ? false : recordObj.amplitude < hammerConf.priceAmplitudeCell;
-    // const priceAmplitudeFlag = !formerDayClosingPrice ? false : recordObj.amplitude > hammerConf.priceAmplitudeFloor;
-    const priceAmplitudeFlag = true;
-    return upperShadowFlag && priceEntityFlag && lowerShadowFlag && oldStockFlag && priceAmplitudeFlag;
+    return upperShadowFlag && priceEntityFlag && lowerShadowFlag && oldStockFlag;
 }
 const formatTime = date => `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
 const fixedNum = num => (num * 100).toFixed(2) * 1;
@@ -100,7 +58,7 @@ tableList.forEach(async (tableName, tableIndex) => {
             buyDay: 0,
             highestPriceDay: 0,
             closingPriceDay: 0,
-            buyAmplitude:0
+            buyAmplitude: 0
         };
         for (let i = 1; i < hammerConf.focusingday + 1; i++) {
             const lowestPrice = recordList[hammerObj.index + i]?.lowest_price;
@@ -148,17 +106,22 @@ tableList.forEach(async (tableName, tableIndex) => {
             info.closingPrice ? fixedNum((info.closingPrice - info.buyPrice) / info.buyPrice) :
                 info.quitFlag ? quitAmplitude : nonquitAmplitude;
 
-        const conclusion = [tableName.replace(/stock/, ""), hammerObj.date, hammerObj.day, !!info.buyPrice, !!info.closingPrice, info.quitFlag, highestPriceAmplitude, info.highestPriceDay, closingPriceAmplitude, info.closingPriceDay, hammerObj.amplitude,info.buyAmplitude];
+        const conclusion = [tableName.replace(/stock/, ""), hammerObj.date, hammerObj.day, !!info.buyPrice, !!info.closingPrice, info.quitFlag, highestPriceAmplitude, info.highestPriceDay, closingPriceAmplitude, info.closingPriceDay, hammerObj.amplitude, info.buyAmplitude];
         conclusionList.push(conclusion);
     })
     if (tableIndex === tableList.length - 1) {
-        conclusionList.unshift(["code", "date", "weekday", "buyFlag", "profitFlag", "quitFlag", "highestPriceAmplitude", "highestPriceDay", "closingPriceAmplitude", "closingPriceDay", "hammerAmplitude","hammerBuyAmplitude"]);
+        // 生成附加锤子线涨幅限制、买入日涨幅限制的历史数据
+        const conclusionAmpConstraintList = conclusionList.filter(record => (record[10] >= 440 && record[10] < 560) && (record[11] >= 480 && record[11] < 540));
+        conclusionList.unshift(["code", "date", "weekday", "buyFlag", "profitFlag", "quitFlag", "highestPriceAmplitude", "highestPriceDay", "closingPriceAmplitude", "closingPriceDay", "hammerAmplitude", "hammerBuyAmplitude"]);
+        conclusionAmpConstraintList.unshift(["code", "date", "weekday", "buyFlag", "profitFlag", "quitFlag", "highestPriceAmplitude", "highestPriceDay", "closingPriceAmplitude", "closingPriceDay", "hammerAmplitude", "hammerBuyAmplitude"]);
         fs.writeFile("./hammer.csv", conclusionList.map(list => list.join()).join("\n"), () => {
             console.log("已生成hammer.csv");
+        });
+        fs.writeFile("./hammerAmpConstraint.csv", conclusionAmpConstraintList.map(list => list.join()).join("\n"), () => {
+            console.log("已生成hammerAmpConstraint.csv");
         });
     }
 });
 
-// 优化：增加低位判断
-
+// 优化：增加低位判断(在学完120个例子再说)
 
